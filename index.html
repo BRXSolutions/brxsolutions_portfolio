@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brix — Portfolio</title>
+  <meta name="description" content="Portfolio of Brix — automation, CRM systems and booking platforms.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="index.html">Brix<span>.</span></a>
+    <nav>
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+      <a class="btn btn-small" href="booking.html">Book now</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Automation · CRM · Booking systems</p>
+      <h1>I build the systems that keep a business running while you sleep.</h1>
+      <p class="lead">From GoHighLevel and n8n workflows to custom booking portals — I connect the tools so bookings, customers and reports just flow.</p>
+      <div class="hero-actions">
+        <a class="btn" href="booking.html">Open booking system →</a>
+        <a class="btn btn-ghost" href="#work">See my work</a>
+      </div>
+    </section>
+
+    <section id="work" class="section">
+      <h2>Selected work</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="tag">Booking</span>
+          <h3>Online booking system</h3>
+          <p>Customer-facing booking flow with live availability, synced to the CRM automatically.</p>
+          <a class="card-link" href="booking.html">Try it →</a>
+        </article>
+        <article class="card">
+          <span class="tag">Automation</span>
+          <h3>Booking → CRM pipeline</h3>
+          <p>n8n workflows that route every new booking into the right GoHighLevel account, with test bookings kept separate.</p>
+        </article>
+        <article class="card">
+          <span class="tag">Reporting</span>
+          <h3>Daily system report</h3>
+          <p>An automated morning summary posted to Slack so the team starts the day knowing what happened overnight.</p>
+        </article>
+        <article class="card">
+          <span class="tag">Platform</span>
+          <h3>Agent portal &amp; API</h3>
+          <p>A portal and API that lets partner agencies book directly, replacing a third-party agent system.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="about" class="section about">
+      <h2>About</h2>
+      <p>I'm Brix, based in the Philippines, working with <strong>Waka Campa</strong>. I design and build the automation and booking infrastructure behind the business — CRM setup, workflow automation, integrations and internal tools.</p>
+      <ul class="skills">
+        <li>GoHighLevel</li><li>n8n</li><li>APIs &amp; webhooks</li><li>Slack integrations</li><li>GitHub</li><li>HTML / CSS / JS</li>
+      </ul>
+    </section>
+
+    <section id="contact" class="section cta">
+      <h2>Let's work together</h2>
+      <p>Ready to book, or want to talk about a project?</p>
+      <div class="hero-actions">
+        <a class="btn" href="booking.html">Book now</a>
+        <a class="btn btn-ghost" href="mailto:brix@wakacampa.com">brix@wakacampa.com</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">© <span id="year"></span> Brix · Built on GitHub Pages</footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book Now — Brix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="index.html">Brix<span>.</span></a>
+    <nav>
+      <a href="index.html">← Back to portfolio</a>
+    </nav>
+  </header>
+
+  <main class="booking">
+    <h1>Make a booking</h1>
+    <p class="lead">Pick your dates and complete your booking below.</p>
+
+    <!--
+      ===== SET YOUR BOOKING SYSTEM HERE =====
+      Paste the URL of your booking system into BOOKING_URL (in the script at the bottom).
+      Examples: a GoHighLevel calendar/form link, your Rental Car Manager booking page,
+      or your own portal's URL.
+    -->
+    <div class="booking-frame">
+      <iframe id="booking-iframe" title="Booking system" loading="lazy"></iframe>
+      <div id="booking-empty" class="booking-empty" hidden>
+        <p><strong>Booking system not connected yet.</strong></p>
+        <p>Open <code>booking.html</code> and set <code>BOOKING_URL</code> to your booking page.</p>
+      </div>
+    </div>
+
+    <p class="fallback">Booking form not loading? <a id="booking-direct" href="#" target="_blank" rel="noopener">Open it in a new tab →</a></p>
+  </main>
+
+  <footer class="footer">© <span id="year"></span> Brix</footer>
+
+  <script>
+    // 👉 Replace with your booking system's URL
+    const BOOKING_URL = "";
+
+    const iframe = document.getElementById('booking-iframe');
+    const empty = document.getElementById('booking-empty');
+    const direct = document.getElementById('booking-direct');
+    if (BOOKING_URL) {
+      iframe.src = BOOKING_URL;
+      direct.href = BOOKING_URL;
+    } else {
+      iframe.hidden = true;
+      empty.hidden = false;
+      direct.parentElement.hidden = true;
+    }
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
