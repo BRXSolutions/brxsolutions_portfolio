@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Book Now — Brix</title>
+  <title>Book a Call — Brix</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -17,44 +17,241 @@
   </header>
 
   <main class="booking">
-    <h1>Make a booking</h1>
-    <p class="lead">Pick your dates and complete your booking below.</p>
+    <h1>Book a call</h1>
+    <p class="lead">Pick a day and time that works for you. You'll get a Google Calendar invitation with a Google Meet link.</p>
 
-    <!--
-      ===== SET YOUR BOOKING SYSTEM HERE =====
-      Paste the URL of your booking system into BOOKING_URL (in the script at the bottom).
-      Examples: a GoHighLevel calendar/form link, your Rental Car Manager booking page,
-      or your own portal's URL.
-    -->
-    <div class="booking-frame">
-      <iframe id="booking-iframe" title="Booking system" loading="lazy"></iframe>
-      <div id="booking-empty" class="booking-empty" hidden>
-        <p><strong>Booking system not connected yet.</strong></p>
-        <p>Open <code>booking.html</code> and set <code>BOOKING_URL</code> to your booking page.</p>
-      </div>
+    <p id="demo-banner" class="notice" hidden>Preview mode — showing sample times. Set <code>API_URL</code> in booking.html to connect your calendar.</p>
+
+    <div class="booker">
+      <section class="panel cal-panel" aria-label="Choose a date">
+        <div class="cal-head">
+          <button type="button" id="prev" class="icon-btn" aria-label="Previous month">‹</button>
+          <h2 id="month-label"></h2>
+          <button type="button" id="next" class="icon-btn" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-grid cal-dow" aria-hidden="true">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="cal-days" class="cal-grid"></div>
+        <p class="tz-note">Times shown in your timezone: <span id="tz"></span></p>
+      </section>
+
+      <section class="panel slot-panel">
+        <div id="step-slots">
+          <h3 id="slots-title">Select a date</h3>
+          <div id="slots" class="slots"></div>
+        </div>
+
+        <form id="step-form" hidden novalidate>
+          <button type="button" class="link-btn" id="back">← Change time</button>
+          <h3 id="form-title"></h3>
+          <label>Name
+            <input name="name" required maxlength="100" autocomplete="name">
+          </label>
+          <label>Email
+            <input name="email" type="email" required maxlength="200" autocomplete="email">
+          </label>
+          <label>What would you like to discuss? <span class="opt">(optional)</span>
+            <textarea name="notes" rows="4" maxlength="1000"></textarea>
+          </label>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <p id="form-error" class="error" hidden></p>
+          <button class="btn" type="submit" id="submit">Confirm booking</button>
+        </form>
+
+        <div id="step-done" hidden>
+          <div class="done-icon">✓</div>
+          <h3>You're booked!</h3>
+          <p id="done-text"></p>
+          <p>A calendar invitation with the Google Meet link has been sent to <strong id="done-email"></strong>.</p>
+          <a id="done-meet" class="btn" target="_blank" rel="noopener" hidden>Open Google Meet</a>
+        </div>
+      </section>
     </div>
-
-    <p class="fallback">Booking form not loading? <a id="booking-direct" href="#" target="_blank" rel="noopener">Open it in a new tab →</a></p>
   </main>
 
   <footer class="footer">© <span id="year"></span> Brix</footer>
 
   <script>
-    // 👉 Replace with your booking system's URL
-    const BOOKING_URL = "";
+    // 👉 Paste your Apps Script web app URL here (ends with /exec)
+    const API_URL = "";
 
-    const iframe = document.getElementById('booking-iframe');
-    const empty = document.getElementById('booking-empty');
-    const direct = document.getElementById('booking-direct');
-    if (BOOKING_URL) {
-      iframe.src = BOOKING_URL;
-      direct.href = BOOKING_URL;
-    } else {
-      iframe.hidden = true;
-      empty.hidden = false;
-      direct.parentElement.hidden = true;
+    const DEMO = !API_URL;
+    const $ = id => document.getElementById(id);
+    const els = {
+      month: $('month-label'), days: $('cal-days'), prev: $('prev'), next: $('next'),
+      slotsTitle: $('slots-title'), slots: $('slots'), form: $('step-form'),
+      formTitle: $('form-title'), error: $('form-error'), submit: $('submit'),
+    };
+    let days = {}, view = null, selectedDate = null, selectedSlot = null;
+
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const monthIndex = d => d.getFullYear() * 12 + d.getMonth();
+    const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const fmtDay = d => d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+    const fmtFull = iso => `${fmtDay(new Date(iso))} · ${fmtTime(iso)}`;
+
+    $('tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    $('year').textContent = new Date().getFullYear();
+    if (DEMO) $('demo-banner').hidden = false;
+
+    function showStep(step) {
+      $('step-slots').hidden = step !== 'slots';
+      $('step-form').hidden = step !== 'form';
+      $('step-done').hidden = step !== 'done';
     }
-    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function demoData() {
+      const out = {}, now = new Date();
+      for (let d = 1; d <= 21; d++) {
+        const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+        if (day.getDay() === 0 || day.getDay() === 6) continue;
+        const list = [];
+        for (let m = 9 * 60; m < 17 * 60; m += 30) {
+          if (Math.random() < 0.35) continue;
+          list.push(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, m).toISOString());
+        }
+        if (list.length) out[ymd(day)] = list;
+      }
+      return { ok: true, days: out };
+    }
+
+    async function load() {
+      els.slots.innerHTML = '<p class="muted">Loading availability…</p>';
+      try {
+        const data = DEMO ? demoData() : await fetch(API_URL).then(r => r.json());
+        if (!data.ok) throw new Error(data.error);
+        // Regroup by the visitor's local date
+        days = {};
+        Object.values(data.days).flat().forEach(iso => {
+          const key = ymd(new Date(iso));
+          (days[key] = days[key] || []).push(iso);
+        });
+        Object.values(days).forEach(list => list.sort());
+        const keys = Object.keys(days).sort();
+        if (!view) {
+          view = keys.length ? new Date(keys[0] + 'T00:00') : new Date();
+          view.setDate(1);
+        }
+        if (selectedDate && !days[selectedDate]) selectedDate = null;
+        renderCalendar();
+        if (selectedDate) selectDate(selectedDate);
+        else {
+          els.slotsTitle.textContent = 'Select a date';
+          els.slots.innerHTML = keys.length
+            ? '<p class="muted">Pick a highlighted date to see open times.</p>'
+            : '<p class="muted">No open times right now — please check back soon.</p>';
+        }
+      } catch (e) {
+        els.slots.innerHTML = '<p class="error">Couldn’t load availability. Please refresh and try again.</p>';
+      }
+    }
+
+    function renderCalendar() {
+      const y = view.getFullYear(), m = view.getMonth();
+      els.month.textContent = view.toLocaleDateString([], { month: 'long', year: 'numeric' });
+      els.days.innerHTML = '';
+      for (let i = 0; i < new Date(y, m, 1).getDay(); i++) els.days.appendChild(document.createElement('span'));
+      const total = new Date(y, m + 1, 0).getDate();
+      for (let d = 1; d <= total; d++) {
+        const key = ymd(new Date(y, m, d));
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'day';
+        b.textContent = d;
+        if (days[key]) {
+          b.classList.add('available');
+          b.setAttribute('aria-label', `${fmtDay(new Date(y, m, d))}, ${days[key].length} times available`);
+          b.onclick = () => selectDate(key);
+        } else {
+          b.disabled = true;
+        }
+        if (key === selectedDate) b.classList.add('selected');
+        els.days.appendChild(b);
+      }
+      const keys = Object.keys(days).sort();
+      els.prev.disabled = !keys.length || monthIndex(view) <= monthIndex(new Date(keys[0] + 'T00:00'));
+      els.next.disabled = !keys.length || monthIndex(view) >= monthIndex(new Date(keys[keys.length - 1] + 'T00:00'));
+    }
+
+    function selectDate(key) {
+      selectedDate = key;
+      renderCalendar();
+      els.slotsTitle.textContent = fmtDay(new Date(key + 'T00:00'));
+      els.slots.innerHTML = '';
+      days[key].forEach(iso => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'slot';
+        b.textContent = fmtTime(iso);
+        b.onclick = () => chooseSlot(iso);
+        els.slots.appendChild(b);
+      });
+      showStep('slots');
+    }
+
+    function chooseSlot(iso) {
+      selectedSlot = iso;
+      els.formTitle.textContent = fmtFull(iso);
+      els.error.hidden = true;
+      showStep('form');
+      els.form.elements.name.focus();
+    }
+
+    function showError(msg) {
+      els.error.textContent = msg;
+      els.error.hidden = false;
+    }
+
+    els.prev.onclick = () => { view.setMonth(view.getMonth() - 1); renderCalendar(); };
+    els.next.onclick = () => { view.setMonth(view.getMonth() + 1); renderCalendar(); };
+    $('back').onclick = () => showStep('slots');
+
+    els.form.onsubmit = async e => {
+      e.preventDefault();
+      els.error.hidden = true;
+      const f = els.form.elements;
+      if (!f.name.value.trim()) return showError('Please enter your name.');
+      if (!f.email.checkValidity() || !f.email.value) return showError('Please enter a valid email.');
+
+      els.submit.disabled = true;
+      els.submit.textContent = 'Booking…';
+      const payload = {
+        name: f.name.value, email: f.email.value, notes: f.notes.value,
+        website: f.website.value, start: selectedSlot,
+      };
+      try {
+        const res = DEMO
+          ? await new Promise(r => setTimeout(() => r({ ok: true, meetLink: '' }), 800))
+          : await fetch(API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(payload),
+            }).then(r => r.json());
+
+        if (!res.ok) {
+          showError(res.error || 'Something went wrong. Please try again.');
+          if (res.refresh) { await load(); showStep('slots'); }
+          return;
+        }
+        $('done-text').textContent = fmtFull(selectedSlot);
+        $('done-email').textContent = payload.email;
+        const meet = $('done-meet');
+        if (res.meetLink) { meet.href = res.meetLink; meet.hidden = false; }
+        days[selectedDate] = days[selectedDate].filter(s => s !== selectedSlot);
+        if (!days[selectedDate].length) delete days[selectedDate];
+        els.form.reset();
+        showStep('done');
+      } catch (err) {
+        showError('Network error — please check your connection and try again.');
+      } finally {
+        els.submit.disabled = false;
+        els.submit.textContent = 'Confirm booking';
+      }
+    };
+
+    load();
   </script>
 </body>
 </html>
